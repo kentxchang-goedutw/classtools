@@ -999,6 +999,120 @@
             padding: 1.5rem; /* Increase padding */
             margin-top: 0; /* Remove top margin */
         }
+
+        /* Sequencing Question Styles */
+        .sequencing-item {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: grab;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.125rem;
+            font-weight: 500;
+        }
+        .sequencing-item:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .sequencing-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .sequencing-item.drag-over {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .sequencing-item-number {
+            background-color: #3b82f6;
+            color: white;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .sequencing-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Matching Question Styles */
+        .matching-container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            position: relative;
+        }
+        .matching-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .matching-item {
+            background-color: white;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 3px solid transparent;
+            font-size: 1.125rem;
+            font-weight: 500;
+            min-height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .matching-item:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .matching-item.selected {
+            border-color: #ec4899;
+            background-color: #fdf2f8;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+        }
+        .matching-item.matched {
+            border-color: #10b981;
+            background-color: #ecfdf5;
+            cursor: default;
+        }
+        .matching-item.matched:hover {
+            transform: none;
+        }
+        #matching-svg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .matching-line {
+            stroke: #ec4899;
+            stroke-width: 3;
+            fill: none;
+            stroke-linecap: round;
+        }
+        .matching-line.correct {
+            stroke: #10b981;
+        }
+        .matching-line.incorrect {
+            stroke: #ef4444;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen">
@@ -1094,6 +1208,9 @@
                 <button data-mode="url_dispatch" class="btn btn-teal !w-40 !h-40 flex items-center justify-center text-4xl">E. 派送網址/HTML</button>
                 <button data-mode="recording" class="btn bg-indigo-600 hover:bg-indigo-700 !w-40 !h-40 flex items-center justify-center text-4xl">F. 錄音題</button>
                 <button data-mode="quick_answer" class="btn bg-red-500 hover:bg-red-600 !w-40 !h-40 flex items-center justify-center text-4xl">G. 搶答</button>
+                <button id="sequencing-settings-btn" class="btn bg-cyan-500 hover:bg-cyan-600 !w-40 !h-40 flex items-center justify-center text-4xl">H. 排序題</button>
+                <button id="matching-settings-btn" class="btn bg-pink-500 hover:bg-pink-600 !w-40 !h-40 flex items-center justify-center text-4xl">I. 配對題</button>
+                <button id="quick-poll-settings-btn" class="btn bg-lime-500 hover:bg-lime-600 !w-40 !h-40 flex items-center justify-center text-4xl">J. 快速投票</button>
             </div>
             <div class="mt-8 flex flex-col items-center">
                 <div class="flex gap-4 mb-4">
@@ -1289,6 +1406,49 @@
                 <div id="quick-answer-locked" class="hidden">
                     <h2 class="text-4xl font-bold text-red-600 mb-4">⏰ 搶答結束</h2>
                     <p class="text-xl text-gray-700">其他同學已經搶答成功了！</p>
+                </div>
+            </div>
+            <div id="interaction-sequencing" class="hidden text-center">
+                <h3 class="text-2xl font-bold text-center mb-2">排序題</h3>
+                <p id="sequencing-question-text" class="text-lg text-gray-700 mb-6"></p>
+                <div class="sequencing-container">
+                    <div id="sequencing-items-container" class="mb-6">
+                        <!-- 排序項目將動態生成在這裡 -->
+                    </div>
+                    <button id="submit-sequencing-btn" class="btn btn-primary max-w-sm mx-auto">送出答案 ✉️</button>
+                </div>
+            </div>
+            <div id="interaction-matching" class="hidden text-center">
+                <h3 class="text-2xl font-bold text-center mb-2">配對題</h3>
+                <p id="matching-question-text" class="text-lg text-gray-700 mb-6"></p>
+                <div class="matching-container">
+                    <svg id="matching-svg-canvas"></svg>
+                    <div class="matching-column" id="matching-column-a" style="z-index: 2;">
+                        <!-- A項目列表 -->
+                    </div>
+                    <div class="matching-column" id="matching-column-b" style="z-index: 2;">
+                        <!-- B項目列表 -->
+                    </div>
+                </div>
+                <button id="submit-matching-btn" class="btn btn-primary max-w-sm mx-auto mt-6">送出答案 ✉️</button>
+            </div>
+
+            <div id="interaction-quick-poll" class="hidden text-center flex flex-col items-center justify-center h-full min-h-screen p-4">
+                <h3 class="text-2xl font-bold text-center mb-4">快速投票</h3>
+                <p id="quick-poll-question-display" class="text-xl text-gray-800 mb-8 font-medium px-4"></p>
+
+                <!-- 投票選項容器 -->
+                <div id="quick-poll-options-container" class="w-full max-w-2xl">
+                    <!-- 選項按鈕將會動態生成在這裡 -->
+                </div>
+
+                <!-- 已投票狀態 -->
+                <div id="quick-poll-voted-status" class="hidden mt-8">
+                    <div class="bg-green-100 border-2 border-green-500 rounded-lg p-6">
+                        <i class="fas fa-check-circle text-green-600 text-5xl mb-3"></i>
+                        <h4 class="text-2xl font-bold text-green-700 mb-2">投票成功！</h4>
+                        <p class="text-gray-700">感謝您的參與</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1559,6 +1719,60 @@
         </div>
     </div>
 
+    <!-- 排序題設定模態框 -->
+    <div id="sequencing-settings-modal" class="magnified-image-modal hidden">
+        <div id="sequencing-settings-modal-content" class="magnified-image-modal-content">
+            <button id="sequencing-settings-modal-close-btn" class="magnified-image-modal-close">×</button>
+            <h4 class="text-2xl font-bold mb-4 text-gray-800">排序題設定</h4>
+            <div class="w-full space-y-4">
+                <div>
+                    <label for="sequencing-question-input" class="block text-gray-700 text-sm font-bold mb-2">題目描述：</label>
+                    <input type="text" id="sequencing-question-input" placeholder="例如：請依照正確順序排列以下步驟" class="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                </div>
+                <div>
+                    <label for="sequencing-items-textarea" class="block text-gray-700 text-sm font-bold mb-2">排序項目（每行一個，按正確順序輸入）：</label>
+                    <textarea id="sequencing-items-textarea" rows="6" class="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="例如：
+打開檔案
+編輯內容
+儲存檔案
+關閉檔案"></textarea>
+                    <p class="text-gray-600 text-xs mt-1">提示：請依照正確順序輸入項目，系統會自動打亂給學生作答</p>
+                </div>
+                <div class="settings-button-group mt-6 w-full">
+                    <button id="start-sequencing-interaction-btn" class="btn bg-cyan-500 hover:bg-cyan-600">確認並開始互動 🚀</button>
+                    <button id="cancel-sequencing-settings-btn" class="btn btn-gray">取消 ↩️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配對題設定模態框 -->
+    <div id="matching-settings-modal" class="magnified-image-modal hidden">
+        <div id="matching-settings-modal-content" class="magnified-image-modal-content">
+            <button id="matching-settings-modal-close-btn" class="magnified-image-modal-close">×</button>
+            <h4 class="text-2xl font-bold mb-4 text-gray-800">配對題設定</h4>
+            <div class="w-full space-y-4">
+                <div>
+                    <label for="matching-question-input" class="block text-gray-700 text-sm font-bold mb-2">題目描述：</label>
+                    <input type="text" id="matching-question-input" placeholder="例如：請將左右兩側相關的項目配對" class="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-pink-500">
+                </div>
+                <div>
+                    <label for="matching-pairs-textarea" class="block text-gray-700 text-sm font-bold mb-2">配對項目（每行一對，用逗號或Tab分隔）：</label>
+                    <textarea id="matching-pairs-textarea" rows="6" class="w-full p-3 border rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-pink-500" placeholder="例如：
+台北,台灣首都
+東京,日本首都
+首爾,韓國首都
+北京,中國首都"></textarea>
+                    <p class="text-gray-600 text-xs mt-1">提示：每行一對配對項目，用逗號（,）或Tab鍵分隔左右兩側</p>
+                </div>
+                <div class="settings-button-group mt-6 w-full">
+                    <button id="start-matching-interaction-btn" class="btn bg-pink-500 hover:bg-pink-600">確認並開始互動 🚀</button>
+                    <button id="cancel-matching-settings-btn" class="btn btn-gray">取消 ↩️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 教師密碼驗證模態框 -->
     <div id="teacher-password-modal" class="magnified-image-modal hidden">
         <div id="teacher-password-modal-content" class="magnified-image-modal-content">
@@ -1574,6 +1788,125 @@
         </div>
     </div>
 
+    <!-- 快速投票設定模態框 -->
+    <div id="quick-poll-settings-modal" class="magnified-image-modal hidden">
+        <div id="quick-poll-settings-modal-content" class="magnified-image-modal-content" style="max-width: 600px;">
+            <button id="quick-poll-settings-modal-close-btn" class="magnified-image-modal-close">×</button>
+            <h4 class="text-2xl font-bold mb-4 text-gray-800">快速投票設定</h4>
+            <div class="w-full space-y-4">
+                <!-- 投票問題 -->
+                <div>
+                    <label for="quick-poll-question-input" class="block text-gray-700 text-sm font-bold mb-2">投票問題：</label>
+                    <input type="text" id="quick-poll-question-input" placeholder="例如：你覺得這節課的內容如何？" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-lime-500">
+                </div>
+
+                <!-- 投票類型選擇 -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">投票類型：</label>
+                    <div class="space-y-2">
+                        <label class="inline-flex items-center w-full p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pollType" value="emoji" class="form-radio text-lime-600 h-5 w-5" checked>
+                            <span class="ml-3 text-gray-700">心情符號（😊 😐 😕）</span>
+                        </label>
+                        <label class="inline-flex items-center w-full p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pollType" value="simple" class="form-radio text-lime-600 h-5 w-5">
+                            <span class="ml-3 text-gray-700">簡單選項（同意 / 不同意 / 不確定）</span>
+                        </label>
+                        <label class="inline-flex items-center w-full p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pollType" value="rating5" class="form-radio text-lime-600 h-5 w-5">
+                            <span class="ml-3 text-gray-700">數字等級（1-5 分）</span>
+                        </label>
+                        <label class="inline-flex items-center w-full p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pollType" value="rating10" class="form-radio text-lime-600 h-5 w-5">
+                            <span class="ml-3 text-gray-700">數字等級（1-10 分）</span>
+                        </label>
+                        <label class="inline-flex items-center w-full p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="pollType" value="custom" class="form-radio text-lime-600 h-5 w-5">
+                            <span class="ml-3 text-gray-700">自訂選項</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 自訂選項輸入區 -->
+                <div id="custom-poll-options-section" class="hidden">
+                    <label for="custom-poll-options-input" class="block text-gray-700 text-sm font-bold mb-2">自訂選項（每行一個）：</label>
+                    <textarea id="custom-poll-options-input" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-lime-500" placeholder="例如：
+選項 A
+選項 B
+選項 C"></textarea>
+                </div>
+
+                <!-- 匿名設定 -->
+                <div class="flex items-center">
+                    <input type="checkbox" id="quick-poll-anonymous-checkbox" checked class="form-checkbox h-5 w-5 text-lime-600 rounded">
+                    <label for="quick-poll-anonymous-checkbox" class="ml-2 text-gray-700 font-medium">匿名投票（不記錄學生姓名）</label>
+                </div>
+            </div>
+
+            <div class="settings-button-group mt-6 w-full">
+                <button id="start-quick-poll-btn" class="btn bg-lime-500 hover:bg-lime-600">開始投票 🚀</button>
+                <button id="cancel-quick-poll-settings-btn" class="btn btn-gray">取消 ↩️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快速投票統計模態框 -->
+    <div id="quick-poll-stats-modal" class="magnified-image-modal hidden">
+        <div id="quick-poll-stats-modal-content" class="magnified-image-modal-content" style="max-width: 900px; max-height: 90vh;">
+            <button id="quick-poll-stats-modal-close-btn" class="magnified-image-modal-close">×</button>
+            <h4 class="text-2xl font-bold mb-4 text-gray-800 text-center">投票統計結果</h4>
+            <p id="quick-poll-stats-question" class="text-lg text-gray-700 mb-4 text-center font-medium"></p>
+
+            <!-- 圖表類型切換 -->
+            <div class="flex justify-center gap-4 mb-4">
+                <button id="chart-type-bar-btn" class="btn bg-blue-500 hover:bg-blue-600 !w-auto text-sm h-10 px-4">長條圖</button>
+                <button id="chart-type-pie-btn" class="btn btn-gray !w-auto text-sm h-10 px-4">圓餅圖</button>
+            </div>
+
+            <!-- 投票統計資訊 -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <p class="text-gray-600 text-sm">總投票數</p>
+                        <p id="poll-total-votes" class="text-3xl font-bold text-lime-600">0</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 text-sm">在線學生數</p>
+                        <p id="poll-online-students" class="text-3xl font-bold text-blue-600">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- D3.js 圖表容器 -->
+            <div class="bg-white border rounded-lg p-4 overflow-x-auto">
+                <svg id="quick-poll-chart-svg" width="800" height="400"></svg>
+            </div>
+
+            <!-- 詳細數據表格 -->
+            <div class="mt-4 overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border px-4 py-2 text-left">選項</th>
+                            <th class="border px-4 py-2 text-right">票數</th>
+                            <th class="border px-4 py-2 text-right">百分比</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quick-poll-stats-table-body">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-center gap-4 mt-6">
+                <button id="download-poll-results-btn" class="btn btn-green !w-auto text-base h-11 px-6">
+                    <i class="fas fa-download mr-2"></i>下載結果 (CSV)
+                </button>
+                <button id="end-quick-poll-btn" class="btn btn-red !w-auto text-base h-11 px-6">
+                    <i class="fas fa-stop mr-2"></i>結束投票
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         // Import Firebase SDK functions.
@@ -1621,6 +1954,12 @@
         let studentResponsesUnsubscribe = null;
         let classroomPresenceUnsubscribe = null; // Unsubscribe function for classroom presence listener.
 
+        // Quick Poll variables
+        let quickPollActive = false;
+        let quickPollData = null; // Stores current poll configuration
+        let quickPollVotesUnsubscribe = null; // Listener for vote updates
+        let currentChartType = 'bar'; // 'bar' or 'pie'
+
         // Drawing specific variables.
         const canvas = document.getElementById('drawing-canvas'); // Main canvas for student display.
         const ctx = canvas.getContext('2d'); // 2D context of the main canvas.
@@ -1664,6 +2003,20 @@
 
         // NEW: Custom Multiple Choice Questions (Teacher side)
         let customMultipleChoiceQuestions = []; // Stores parsed questions from teacher input
+
+        // NEW: Sequencing and Matching Questions (Teacher side)
+        let sequencingData = {
+            question: '',
+            correctOrder: [] // Array of items in correct order
+        };
+        let matchingData = {
+            question: '',
+            pairs: [] // Array of {left, right} objects
+        };
+        let currentMatchingSelection = {
+            leftItem: null,
+            rightItem: null
+        };
         let currentMultipleChoiceQuestions = null; // Stores questions from Firestore for student/teacher monitor
 
         // NEW: Peer Review System Variables
@@ -1697,6 +2050,9 @@
             url_dispatch: document.getElementById('interaction-url-dispatch'), // Now handles both URL and HTML
             recording: document.getElementById('interaction-recording'), // New UI
             quick_answer: document.getElementById('interaction-quick-answer'), // Quick answer UI
+            quick_poll: document.getElementById('interaction-quick-poll'), // Quick poll UI
+            sequencing: document.getElementById('interaction-sequencing'), // Sequencing UI
+            matching: document.getElementById('interaction-matching'), // Matching UI
         };
 
         // --- Core Logic Functions ---
@@ -1867,6 +2223,26 @@
                     document.getElementById('quick-answer-locked').classList.add('hidden');
                     document.getElementById('quick-answer-button-container').innerHTML = '';
                     document.getElementById('quick-answer-button-container').classList.add('pointer-events-none');
+                    break;
+                case 'sequencing':
+                    // Reset sequencing state
+                    document.getElementById('sequencing-items-container').innerHTML = '';
+                    const submitSequencingBtn = document.getElementById('submit-sequencing-btn');
+                    submitSequencingBtn.disabled = false;
+                    submitSequencingBtn.classList.remove('btn-gray');
+                    submitSequencingBtn.classList.add('btn-primary');
+                    break;
+                case 'matching':
+                    // Reset matching state
+                    document.getElementById('matching-column-a').innerHTML = '';
+                    document.getElementById('matching-column-b').innerHTML = '';
+                    document.getElementById('matching-svg-canvas').innerHTML = '';
+                    const submitMatchingBtn = document.getElementById('submit-matching-btn');
+                    submitMatchingBtn.disabled = false;
+                    submitMatchingBtn.classList.remove('btn-gray');
+                    submitMatchingBtn.classList.add('btn-primary');
+                    currentMatchingSelection.leftItem = null;
+                    currentMatchingSelection.rightItem = null;
                     break;
             }
         }
@@ -2189,6 +2565,26 @@
                 }
                 currentMultipleChoiceQuestions = payload.multiple_choice_questions; // Update global for teacher monitor
 
+                // NEW: Add sequencing settings if in that mode
+                if (mode === 'sequencing' && options.question && options.correctOrder) {
+                    payload.sequencingSettings = {
+                        question: options.question,
+                        correctOrder: options.correctOrder
+                    };
+                } else {
+                    payload.sequencingSettings = null;
+                }
+
+                // NEW: Add matching settings if in that mode
+                if (mode === 'matching' && options.question && options.pairs) {
+                    payload.matchingSettings = {
+                        question: options.question,
+                        pairs: options.pairs
+                    };
+                } else {
+                    payload.matchingSettings = null;
+                }
+
                 await setDoc(controlRef, payload, { merge: true });
 
                 // Handle student responses listener based on mode
@@ -2331,6 +2727,16 @@
                             interactionMultipleChoice.classList.add('enlarged-buttons');
                         } else {
                             interactionMultipleChoice.classList.remove('enlarged-buttons');
+                        }
+                    } else if (currentInteractionMode === 'sequencing') {
+                        const sequencingSettings = data.sequencingSettings;
+                        if (sequencingSettings && modeChanged) {
+                            setupSequencingUI(sequencingSettings);
+                        }
+                    } else if (currentInteractionMode === 'matching') {
+                        const matchingSettings = data.matchingSettings;
+                        if (matchingSettings && modeChanged) {
+                            setupMatchingUI(matchingSettings);
                         }
                     }
                 }
@@ -2557,6 +2963,57 @@
                             </div>`;
                         } else {
                             answerContentHTML = `<p class="text-gray-500">未搶答或搶答失敗</p>`;
+                        }
+                    }
+                    else if (mode === 'sequencing') {
+                        // Handle sequencing answers
+                        try {
+                            const studentOrder = JSON.parse(student.answer);
+                            const correctOrder = sequencingData.correctOrder;
+                            let isCorrect = true;
+
+                            answerContentHTML = `<div class="flex flex-col w-full gap-1">`;
+                            studentOrder.forEach((item, index) => {
+                                const correct = correctOrder[index] === item;
+                                if (!correct) isCorrect = false;
+                                answerContentHTML += `
+                                    <div class="flex items-center gap-2 text-sm">
+                                        <i class="fas ${correct ? 'fa-check-circle text-green-500' : 'fa-times-circle text-red-500'}"></i>
+                                        <span class="font-bold">${index + 1}.</span>
+                                        <span>${item}</span>
+                                    </div>
+                                `;
+                            });
+                            answerContentHTML += `</div>`;
+                        } catch (e) {
+                            answerContentHTML = `<p class="text-gray-500">答案格式錯誤</p>`;
+                        }
+                    }
+                    else if (mode === 'matching') {
+                        // Handle matching answers
+                        try {
+                            const studentMatches = JSON.parse(student.answer);
+                            const correctPairs = matchingData.pairs;
+                            let correctCount = 0;
+
+                            answerContentHTML = `<div class="flex flex-col w-full gap-1">`;
+                            studentMatches.forEach(match => {
+                                const correctPair = correctPairs.find(p => p.left === match.left);
+                                const isCorrect = correctPair && correctPair.right === match.right;
+                                if (isCorrect) correctCount++;
+
+                                answerContentHTML += `
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <i class="fas ${isCorrect ? 'fa-check-circle text-green-500' : 'fa-times-circle text-red-500'}"></i>
+                                        <span>${match.left}</span>
+                                        <i class="fas fa-arrow-right text-gray-400"></i>
+                                        <span>${match.right}</span>
+                                    </div>
+                                `;
+                            });
+                            answerContentHTML += `<div class="text-xs text-gray-600 mt-1">正確: ${correctCount}/${studentMatches.length}</div></div>`;
+                        } catch (e) {
+                            answerContentHTML = `<p class="text-gray-500">答案格式錯誤</p>`;
                         }
                     }
                     else { // Default multiple choice (1-4)
@@ -3340,6 +3797,225 @@
         }
 
 
+        // --- Sequencing Question Logic ---
+        function setupSequencingUI(data) {
+            const questionText = document.getElementById('sequencing-question-text');
+            const container = document.getElementById('sequencing-items-container');
+
+            questionText.textContent = data.question || '請依照正確順序排列以下項目';
+            container.innerHTML = '';
+
+            // Shuffle items
+            const shuffled = [...data.correctOrder].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((text, index) => {
+                const item = document.createElement('div');
+                item.className = 'sequencing-item';
+                item.draggable = true;
+                item.dataset.text = text;
+                item.innerHTML = `
+                    <div class="sequencing-item-number">${index + 1}</div>
+                    <div class="sequencing-item-text">${text}</div>
+                `;
+
+                // Drag events
+                item.addEventListener('dragstart', (e) => {
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                });
+
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const dragging = document.querySelector('.sequencing-item.dragging');
+                    if (dragging && dragging !== item) {
+                        const rect = item.getBoundingClientRect();
+                        const midY = rect.top + rect.height / 2;
+                        if (e.clientY < midY) {
+                            container.insertBefore(dragging, item);
+                        } else {
+                            container.insertBefore(dragging, item.nextSibling);
+                        }
+                    }
+                });
+
+                // Touch events for mobile
+                let touchStartY = 0;
+                item.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                    item.classList.add('dragging');
+                });
+
+                item.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                    if (target && target.classList.contains('sequencing-item') && target !== item) {
+                        if (touch.clientY < touchStartY) {
+                            container.insertBefore(item, target);
+                        } else {
+                            container.insertBefore(item, target.nextSibling);
+                        }
+                        touchStartY = touch.clientY;
+                    }
+                });
+
+                item.addEventListener('touchend', () => {
+                    item.classList.remove('dragging');
+                });
+
+                container.appendChild(item);
+            });
+
+            // Update numbers after any change
+            updateSequencingNumbers();
+        }
+
+        function updateSequencingNumbers() {
+            const items = document.querySelectorAll('.sequencing-item');
+            items.forEach((item, index) => {
+                const numberDiv = item.querySelector('.sequencing-item-number');
+                if (numberDiv) numberDiv.textContent = index + 1;
+            });
+        }
+
+        // --- Matching Question Logic ---
+        function setupMatchingUI(data) {
+            const questionText = document.getElementById('matching-question-text');
+            const columnA = document.getElementById('matching-column-a');
+            const columnB = document.getElementById('matching-column-b');
+            const svg = document.getElementById('matching-svg-canvas');
+
+            questionText.textContent = data.question || '請將左右兩側相關的項目配對';
+            columnA.innerHTML = '';
+            columnB.innerHTML = '';
+            svg.innerHTML = '';
+
+            // Shuffle items
+            const leftItems = data.pairs.map(p => p.left).sort(() => Math.random() - 0.5);
+            const rightItems = data.pairs.map(p => p.right).sort(() => Math.random() - 0.5);
+
+            leftItems.forEach((text, index) => {
+                const item = document.createElement('div');
+                item.className = 'matching-item';
+                item.dataset.side = 'left';
+                item.dataset.text = text;
+                item.dataset.index = index;
+                item.textContent = text;
+                item.addEventListener('click', () => handleMatchingClick(item));
+                columnA.appendChild(item);
+            });
+
+            rightItems.forEach((text, index) => {
+                const item = document.createElement('div');
+                item.className = 'matching-item';
+                item.dataset.side = 'right';
+                item.dataset.text = text;
+                item.dataset.index = index;
+                item.textContent = text;
+                item.addEventListener('click', () => handleMatchingClick(item));
+                columnB.appendChild(item);
+            });
+        }
+
+        function handleMatchingClick(item) {
+            const side = item.dataset.side;
+
+            if (item.classList.contains('matched')) {
+                // Unmatch
+                const matchedWith = item.dataset.matchedWith;
+                delete item.dataset.matchedWith;
+                item.classList.remove('matched');
+
+                // Find and unmatch partner
+                const partner = document.querySelector(`.matching-item[data-side="${side === 'left' ? 'right' : 'left'}"][data-text="${matchedWith}"]`);
+                if (partner) {
+                    delete partner.dataset.matchedWith;
+                    partner.classList.remove('matched');
+                }
+
+                redrawMatchingLines();
+                return;
+            }
+
+            if (side === 'left') {
+                if (currentMatchingSelection.leftItem === item) {
+                    currentMatchingSelection.leftItem.classList.remove('selected');
+                    currentMatchingSelection.leftItem = null;
+                } else {
+                    if (currentMatchingSelection.leftItem) {
+                        currentMatchingSelection.leftItem.classList.remove('selected');
+                    }
+                    currentMatchingSelection.leftItem = item;
+                    item.classList.add('selected');
+                }
+            } else {
+                if (currentMatchingSelection.rightItem === item) {
+                    currentMatchingSelection.rightItem.classList.remove('selected');
+                    currentMatchingSelection.rightItem = null;
+                } else {
+                    if (currentMatchingSelection.rightItem) {
+                        currentMatchingSelection.rightItem.classList.remove('selected');
+                    }
+                    currentMatchingSelection.rightItem = item;
+                    item.classList.add('selected');
+                }
+            }
+
+            // If both sides selected, create match
+            if (currentMatchingSelection.leftItem && currentMatchingSelection.rightItem) {
+                const left = currentMatchingSelection.leftItem;
+                const right = currentMatchingSelection.rightItem;
+
+                left.classList.remove('selected');
+                right.classList.remove('selected');
+                left.classList.add('matched');
+                right.classList.add('matched');
+
+                left.dataset.matchedWith = right.dataset.text;
+                right.dataset.matchedWith = left.dataset.text;
+
+                currentMatchingSelection.leftItem = null;
+                currentMatchingSelection.rightItem = null;
+
+                redrawMatchingLines();
+            }
+        }
+
+        function redrawMatchingLines() {
+            const svg = document.getElementById('matching-svg-canvas');
+            svg.innerHTML = '';
+
+            const container = document.querySelector('.matching-container');
+            const rect = container.getBoundingClientRect();
+            svg.setAttribute('width', rect.width);
+            svg.setAttribute('height', rect.height);
+
+            document.querySelectorAll('.matching-item.matched[data-side="left"]').forEach(leftItem => {
+                const rightText = leftItem.dataset.matchedWith;
+                const rightItem = document.querySelector(`.matching-item[data-side="right"][data-text="${rightText}"]`);
+
+                if (rightItem) {
+                    const leftRect = leftItem.getBoundingClientRect();
+                    const rightRect = rightItem.getBoundingClientRect();
+
+                    const x1 = leftRect.right - rect.left;
+                    const y1 = leftRect.top + leftRect.height / 2 - rect.top;
+                    const x2 = rightRect.left - rect.left;
+                    const y2 = rightRect.top + rightRect.height / 2 - rect.top;
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const d = `M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`;
+                    line.setAttribute('d', d);
+                    line.setAttribute('class', 'matching-line');
+                    svg.appendChild(line);
+                }
+            });
+        }
+
         // --- Drawing Board Logic ---
         function setupCanvas() {
             const canvasElement = document.getElementById('drawing-canvas');
@@ -4105,6 +4781,16 @@
 
             // Teacher mode selection.
             // MODIFIED: Multiple Choice button now opens a modal
+            // Sequencing Settings Button
+            document.getElementById('sequencing-settings-btn').addEventListener('click', () => {
+                document.getElementById('sequencing-settings-modal').classList.remove('hidden');
+            });
+
+            // Matching Settings Button
+            document.getElementById('matching-settings-btn').addEventListener('click', () => {
+                document.getElementById('matching-settings-modal').classList.remove('hidden');
+            });
+
             document.getElementById('multiple-choice-settings-btn').addEventListener('click', () => {
                 // Initialize modal state based on current customMultipleChoiceQuestions
                 const mcQuestionTypeNone = document.querySelector('input[name="mcQuestionType"][value="none"]');
@@ -4242,10 +4928,51 @@
                     showMessage('老師已暫停回覆，無法送出答案。', 'error');
                     return;
                 }
-                const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY); 
+                const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
                 await submitAnswer(dataUrl);
                 e.currentTarget.disabled = true;
                 e.currentTarget.classList.replace('btn-primary', 'btn-gray');
+            });
+
+            // Sequencing submission.
+            document.getElementById('submit-sequencing-btn').addEventListener('click', async (e) => {
+                if (isResponsePaused) {
+                    showMessage('老師已暫停回覆，無法送出答案。', 'error');
+                    return;
+                }
+                const container = document.getElementById('sequencing-items-container');
+                const items = Array.from(container.children).map(item => item.dataset.text);
+                await submitAnswer(JSON.stringify(items));
+                e.currentTarget.disabled = true;
+                e.currentTarget.classList.replace('btn-primary', 'btn-gray');
+                showMessage('答案已送出！', 'success');
+            });
+
+            // Matching submission.
+            document.getElementById('submit-matching-btn').addEventListener('click', async (e) => {
+                if (isResponsePaused) {
+                    showMessage('老師已暫停回覆，無法送出答案。', 'error');
+                    return;
+                }
+                const matches = [];
+                document.querySelectorAll('.matching-item.matched').forEach(item => {
+                    if (item.dataset.side === 'left' && item.dataset.matchedWith) {
+                        matches.push({
+                            left: item.dataset.text,
+                            right: item.dataset.matchedWith
+                        });
+                    }
+                });
+
+                if (matches.length === 0) {
+                    showMessage('請至少完成一個配對！', 'error');
+                    return;
+                }
+
+                await submitAnswer(JSON.stringify(matches));
+                e.currentTarget.disabled = true;
+                e.currentTarget.classList.replace('btn-primary', 'btn-gray');
+                showMessage('答案已送出！', 'success');
             });
 
             // Drawing board events.
@@ -4516,6 +5243,102 @@
             urlDispatchModalCloseBtn.addEventListener('click', hideUrlDispatchSettingsModal);
             document.getElementById('save-dispatch-settings-btn').addEventListener('click', saveDispatchSettings); // Renamed
             document.getElementById('clear-dispatch-settings-btn').addEventListener('click', clearDispatchSettings); // Renamed
+
+            // Sequencing Settings Modal listeners
+            document.getElementById('sequencing-settings-modal-close-btn').addEventListener('click', () => {
+                document.getElementById('sequencing-settings-modal').classList.add('hidden');
+            });
+            document.getElementById('cancel-sequencing-settings-btn').addEventListener('click', () => {
+                document.getElementById('sequencing-settings-modal').classList.add('hidden');
+            });
+            document.getElementById('start-sequencing-interaction-btn').addEventListener('click', async () => {
+                const question = document.getElementById('sequencing-question-input').value.trim();
+                const itemsText = document.getElementById('sequencing-items-textarea').value.trim();
+
+                if (!question || !itemsText) {
+                    showMessage('請輸入題目和排序項目！', 'error');
+                    return;
+                }
+
+                const items = itemsText.split('\n').map(item => item.trim()).filter(item => item);
+                if (items.length < 2) {
+                    showMessage('至少需要兩個排序項目！', 'error');
+                    return;
+                }
+
+                sequencingData.question = question;
+                sequencingData.correctOrder = items;
+
+                document.getElementById('sequencing-settings-modal').classList.add('hidden');
+                showView('teacherMonitor');
+                await setInteractionMode('sequencing', {
+                    question: question,
+                    correctOrder: items
+                });
+            });
+
+            // Matching Settings Modal listeners
+            document.getElementById('matching-settings-modal-close-btn').addEventListener('click', () => {
+                document.getElementById('matching-settings-modal').classList.add('hidden');
+            });
+            document.getElementById('cancel-matching-settings-btn').addEventListener('click', () => {
+                document.getElementById('matching-settings-modal').classList.add('hidden');
+            });
+            document.getElementById('start-matching-interaction-btn').addEventListener('click', async () => {
+                const question = document.getElementById('matching-question-input').value.trim();
+                const pairsText = document.getElementById('matching-pairs-textarea').value.trim();
+
+                if (!question || !pairsText) {
+                    showMessage('請輸入題目和配對項目！', 'error');
+                    return;
+                }
+
+                const lines = pairsText.split('\n').map(line => line.trim()).filter(line => line);
+                const pairs = [];
+
+                for (const line of lines) {
+                    const parts = line.split(/[,\t]/).map(p => p.trim()).filter(p => p);
+                    if (parts.length >= 2) {
+                        pairs.push({ left: parts[0], right: parts[1] });
+                    }
+                }
+
+                if (pairs.length < 2) {
+                    showMessage('至少需要兩對配對項目！', 'error');
+                    return;
+                }
+
+                matchingData.question = question;
+                matchingData.pairs = pairs;
+
+                document.getElementById('matching-settings-modal').classList.add('hidden');
+                showView('teacherMonitor');
+                await setInteractionMode('matching', {
+                    question: question,
+                    pairs: pairs
+                });
+            });
+
+            // Quick Poll Settings Modal listeners
+            document.getElementById('quick-poll-settings-btn').addEventListener('click', showQuickPollSettingsModal);
+            document.getElementById('quick-poll-settings-modal-close-btn').addEventListener('click', hideQuickPollSettingsModal);
+            document.getElementById('cancel-quick-poll-settings-btn').addEventListener('click', hideQuickPollSettingsModal);
+            document.getElementById('start-quick-poll-btn').addEventListener('click', startQuickPoll);
+
+            // Quick Poll Stats Modal listeners
+            document.getElementById('quick-poll-stats-modal-close-btn').addEventListener('click', hideQuickPollStatsModal);
+            document.getElementById('end-quick-poll-btn').addEventListener('click', endQuickPoll);
+            document.getElementById('download-poll-results-btn').addEventListener('click', downloadPollResults);
+            document.getElementById('chart-type-bar-btn').addEventListener('click', () => switchChartType('bar'));
+            document.getElementById('chart-type-pie-btn').addEventListener('click', () => switchChartType('pie'));
+
+            // Poll type radio button listeners
+            document.querySelectorAll('input[name="pollType"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const customSection = document.getElementById('custom-poll-options-section');
+                    customSection.classList.toggle('hidden', e.target.value !== 'custom');
+                });
+            });
 
             // NEW: Event listeners for dispatch type radio buttons
             dispatchTypeRadios.forEach(radio => {
